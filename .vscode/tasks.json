@@ -7,9 +7,9 @@
             "args": [
                 "-f",
                 "elf",
-                "-F",
-                "dwarf",
-                "-g",
+                //"-F",
+                //"dwarf",
+                //"-g",
                 "${file}"
             ]
         },
@@ -19,6 +19,7 @@
             "args": [
                 "-m",
                 "elf_i386",
+                "-s",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "${fileDirname}/${fileBasenameNoExtension}.o"
