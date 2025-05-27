@@ -7,6 +7,22 @@
 [bits 16] 
 [org 0x7C00]
 
+start:
+    cli                             ;clear interrupt flags + disable
+    mov ax, 0x00                    ;clear used registers
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7c00 - 0x100          ;setup stack below bootloader 
+    sti                             ;enable interrupts
+    
+    mov si, msg
+    call print
+end:
+    cli                             ;clear interrupts
+    hlt                             ;halt cpu work
+
+
 ;BEGIN TELETYPE PRINT FUNCTION (Fooling around)
 print:                          ;print: parameter is string in si
     push si                     ;record current data
@@ -23,21 +39,6 @@ looper:
     pop si
     ret
 ;END TELETYPE PRINT FUNCTION
-
-start:
-    cli                             ;clear interrupt flags + disable
-    mov ax, 0x00                    ;clear used registers
-    mov ds, ax
-    mov es, ax
-    mov ss, ax
-    mov sp, 0x7c00 - 0x100          ;setup stack below bootloader 
-    sti                             ;enable interrupts
-    
-    mov si, msg
-    call print
-end:
-    cli                             ;clear interrupts
-    hlt                             ;halt cpu work
 ;==============================entering protected mode=========================================
 
 ;CPU mode is determined by bit 0 of cr0: 0 = real Mode, 1 = Protected Mode 

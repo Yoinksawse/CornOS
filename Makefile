@@ -2,12 +2,12 @@ HOME_DIR := .
 OS_NAME := BeckerOS
 ISO_OUTPUT := $(OS_NAME).iso
 
-BOOT_SRC := $(HOME_DIR)/src/boot.asm
+BOOT_SRC := $(HOME_DIR)/src/bootloader/boot.asm
 BOOT_BIN := $(HOME_DIR)/bin/boot.bin
-LOADER_SRC := $(HOME_DIR)/src/loader.asm
+LOADER_SRC := $(HOME_DIR)/src/bootloader/loader.asm
 LOADER_OBJ := $(HOME_DIR)/bin/loader.o
 
-KERNEL_SRC := $(HOME_DIR)/src/kernel_main.c
+KERNEL_SRC := $(HOME_DIR)/src/kernel/kernel_main.c
 KERNEL_OBJ := $(HOME_DIR)/bin/kernel_main.o
 KERNEL_ELF := $(HOME_DIR)/bin/kernel_main.elf
 KERNEL_BIN := $(HOME_DIR)/bin/kernel_main.bin
