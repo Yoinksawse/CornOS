@@ -15,46 +15,58 @@ start:
     mov ss, ax
     mov sp, 0x7c00 - 0x100          ;setup stack below bootloader 
     sti                             ;enable interrupts
-    
-    mov si, msg
-    call print
-end:
-    cli                             ;clear interrupts
-    hlt                             ;halt cpu work
 
+;------------------------------entering protected mode-----------------------------------------
+goPMode:
+    cli                             ;disable interrupts
 
-;BEGIN TELETYPE PRINT FUNCTION (Fooling around)
-print:                              ;print: parameter is string in si
-    push si                         ;record current data
-    push ax
-looper:
-    lodsb                           ;loads next byte in si to al, si++
-    or al, al                       ;return if null
-    jz .done
-    mov ah, 0x0E                    ;teletype output
-    int 0x10                        ;bios interrupt print
-    jmp looper                      ;loop
-.done:
-    pop ax
-    pop si
-    ret
-;END TELETYPE PRINT FUNCTION
+    ;enable a20 address line (fast): >= 1MB memory 
+    in al, 0x92                     ;read config (1 byte) from port 0x92 (controls a20) to al
+    or al, 2                        ;set bit 1 to 1: a20 enabled
+    out 0x92, al                    ;output new config byte to 0x92
 
-;==============================entering protected mode=========================================
-mov eax, cr0                        ;make cr0 := 1 := protected mode
-or eax, 1
-mov cr0, eax
+    xor ax, ax
+    mov ds, ax                      ;clear data segment for our own 
+    lgdt [gdt_descriptor]           ;load gdt
+
+    mov eax, cr0                    ;make cr0 (cpu mode) := 1 := protected mode
+    or eax, 1
+    mov cr0, eax
+
+    jmp code_offset:PModeMain     ;far jump to protected mode: setup cs
 
 ;=============================32-bit protected mode============================================
 ;run Loader (REMEMBER: KERNEL MUST START AT 0xA000), 
 [bits 32]
+PModeMain:
+    ; Set segment registers
+    mov ax, data_offset
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov ebp, 0x9c00
+    mov esp, ebp
 
 
 
-;=============================data segment=====================================================
-;BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT
+test_printing:
+    mov edi, 0xB8000
+    mov esi, msg
+    mov ah, 0x1B  ;bright cyan on blue
+.print:
+    lodsb         ;load [esi] to al, increment esi
+    test al, al   ;check for null terminator
+    jz .done
+    stosw         ;store ax to edi, add 2 to esi
+    jmp .print
+.done:
+    jmp $
+
+
+;=============================unlabelled data segment==========================================
+;BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT
 gdt_start:
-    ;null Segment
+    ;Null Segment
     gdt_null:
         dq 0
 
@@ -81,7 +93,7 @@ gdt_start:
         db 11001111b        ;limit (part 2): 0fh = 1111b (first nibble), \
                             ;flags: (1: page granularity)(1: 32 bit segment)(0: clear)(0: reserved) (second nibble)
         db 0x00             ;base (part 3)
-    
+
     ;Task State System Segment 
     ;base: start of tss / 0
     ;limit: size - 1 = 104 - 1 bits
@@ -93,15 +105,18 @@ gdt_start:
         db 10001001b        ;access byte: (1)(00: DPL 0)(0: tss segment)(0x9/1001b: 32bi tss, available)
         db 00000000b        ;limit (part 2): 0000 (first nibble), \
                             ;flags: (0: byte granularity)(0: irrelevant for tss)(0: clear)(0: reserved) (second nibble)
-        db 0x00             ;base (part 3)
+        db 0x00             ;base (part 3)    
 gdt_end:
 
 gdt_descriptor:
     dw gdt_end - gdt_start - 1      ; length = size - 1 (limit)
     dd gdt_start                    ; base address
-;END GDT END GDT END GDT END GDT END GDT
 
-msg db 'Booting...', 0              ;print message (null at end)
+code_offset equ gdt_code - gdt_start
+data_offset equ gdt_data - gdt_start
+;END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT
+
+msg db 'Booted!', 0
 
 times 510 - ($ - $$) db 0           ;memset remaining of 1st segment to 0
 dw 0xaa55                           ;last 2 bytes: MBR signature
