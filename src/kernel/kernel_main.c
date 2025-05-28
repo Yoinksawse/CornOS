@@ -1,3 +1,4 @@
+//REMEMBER: KERNEL MUST START AT 0xA000
 
 int start() {
 }

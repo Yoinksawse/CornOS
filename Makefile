@@ -12,7 +12,7 @@ KERNEL_OBJ := $(HOME_DIR)/bin/kernel_main.o
 KERNEL_ELF := $(HOME_DIR)/bin/kernel_main.elf
 KERNEL_BIN := $(HOME_DIR)/bin/kernel_main.bin
 
-all: bootloader kernel iso clean
+all: bootloader kernel floppy_img clean
 	qemu-system-i386 -cdrom $(ISO_OUTPUT) -boot d -m 512
 
 test: bootloader
@@ -27,7 +27,7 @@ kernel: bootloader
 	i686-elf-ld -Ttext 0xA000 -o $(KERNEL_ELF) $(LOADER_OBJ) $(KERNEL_OBJ)
 	i686-elf-objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 
-iso: bootloader kernel
+floppy_img: 
 	cp bin/boot.bin .  
 	mkisofs -o $(ISO_OUTPUT) -V "$(OS_NAME)" \
 		-b boot.bin -no-emul-boot -boot-load-size 4 -boot-info-table \
