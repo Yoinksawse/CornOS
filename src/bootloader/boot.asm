@@ -2,8 +2,6 @@
 ;-real mode: 
 ;-protected mode: run Loader (loads kernel elf)
 ;================================16-bit real mode==============================================
-;clear registers, disable interrupts, (enable a20line), load gdt
-
 [bits 16] 
 [org 0x7C00]
 
@@ -16,11 +14,23 @@ start:
     mov sp, 0x7c00 - 0x100          ;setup stack below bootloader 
     sti                             ;enable interrupts
 
+    ;load kernel from hard drive using CHS
+    mov bx, kernel_load_seg
+    mov ch, 0x00                    ;Cylinder
+    mov dh, 0x00                    ;Head
+    mov cl, 0x02                    ;Sector
+    mov dl, 0x80                    ;read from 1st hdd
+    mov ah, 0x02                    ;read
+    mov al, 8                       ;no of sectors/size of kernel
+    int 0x13
+
+    jc disk_read_error
+
 ;------------------------------entering protected mode-----------------------------------------
 goPMode:
     cli                             ;disable interrupts
 
-    ;enable a20 address line (fast): >= 1MB memory 
+    ;enable a20 address line (fast): 1mb + 64kb memory 
     in al, 0x92                     ;read config (1 byte) from port 0x92 (controls a20) to al
     or al, 2                        ;set bit 1 to 1: a20 enabled
     out 0x92, al                    ;output new config byte to 0x92
@@ -33,14 +43,17 @@ goPMode:
     or eax, 1
     mov cr0, eax
 
-    jmp code_offset:PModeMain     ;far jump to protected mode: setup cs
+    jmp code_seg:PModeMain          ;far jump to protected mode: setup cs
+
+
+disk_read_error:
+    hlt
 
 ;=============================32-bit protected mode============================================
-;run Loader (REMEMBER: KERNEL MUST START AT 0xA000), 
 [bits 32]
 PModeMain:
     ; Set segment registers
-    mov ax, data_offset
+    mov ax, data_seg
     mov ds, ax
     mov ss, ax
     mov es, ax
@@ -48,20 +61,20 @@ PModeMain:
     mov esp, ebp
 
 
-
 test_printing:
-    mov edi, 0xB8000
-    mov esi, msg
-    mov ah, 0x1B  ;bright cyan on blue
-.print:
-    lodsb         ;load [esi] to al, increment esi
-    test al, al   ;check for null terminator
-    jz .done
-    stosw         ;store ax to edi, add 2 to esi
-    jmp .print
-.done:
-    jmp $
+    mov edi, 0xB8000                ;Video RAM memory area
+    mov esi, msg                    ;"Booted!"
+    mov ah, 10001011b               ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
+.print_loop:
+    lodsb                           ;load [esi] to al, increment esi
+    test al, al                     ;check for null terminator
+    jz .goKernel
+    stosw                           ;store ax to edi, add 2 to esi
+    jmp .print_loop
 
+.goKernel:
+    jmp code_seg:loader_start       ;jump to start address of loader (stage 2 bootloader)
+    jmp $                           ;catch exceptions
 
 ;=============================unlabelled data segment==========================================
 ;BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT
@@ -109,12 +122,16 @@ gdt_start:
 gdt_end:
 
 gdt_descriptor:
-    dw gdt_end - gdt_start - 1      ; length = size - 1 (limit)
-    dd gdt_start                    ; base address
+    dw gdt_end - gdt_start - 1      ;length = size - 1 (limit)
+    dd gdt_start                    ;base address
 
-code_offset equ gdt_code - gdt_start
-data_offset equ gdt_data - gdt_start
+code_seg equ gdt_code - gdt_start
+data_seg equ gdt_data - gdt_start
 ;END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT
+
+;loader, kernel info 
+loader_start equ 0x100000           ;LOADER STARTS AT 0x10000
+kernel_load_seg equ 0x1000          ;
 
 msg db 'Booted!', 0
 
