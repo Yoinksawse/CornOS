@@ -1,7 +1,7 @@
-//REMEMBER: KERNEL MUST START AT 0xA000
+//KERNEL STARTS AT 100000
 
 #include "kernel.h"
 
-void kernel_main() {
+void kmain(void) {
 
-}
+}   

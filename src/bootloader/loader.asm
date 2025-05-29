@@ -1,12 +1,13 @@
-;stage 2 of booting: load kernel.elf + jump to entry point
-;KERNEL STARTS AT 0x10000
+;bootloader stage 2 
+;KERNEL STARTS AT 0x100000
 [bits 32]
 
-global _start:
-extern kernel_main
+section .text
+    global _ldr_start:       ;entry point into kernel (accessed by booter)
+    extern kmain            ;in kernel.c
 
-_start:
-    call kernel_main
+_ldr_start:
+    call kmain
     jmp $
 
 times 512 - ($ - $$) db 0

@@ -1,30 +1,28 @@
-;stage 1 of booting
-;-real mode: 
-;-protected mode: run Loader (loads kernel elf)
+;bootloader stage 1
 ;================================16-bit real mode==============================================
 [bits 16] 
 [org 0x7C00]
 
-start:
+_start:
     cli                             ;clear interrupt flags + disable
     mov ax, 0x00                    ;clear used registers
     mov ds, ax
     mov es, ax
     mov ss, ax
     mov sp, 0x7c00 - 0x100          ;setup stack below bootloader 
+
+    mov [hdd], dl                   ;remember boot drive
     sti                             ;enable interrupts
 
     ;load kernel from hard drive using CHS
-    mov bx, kernel_load_seg
+    mov bx, loader_seg
     mov ch, 0x00                    ;Cylinder
     mov dh, 0x00                    ;Head
     mov cl, 0x02                    ;Sector
-    mov dl, 0x80                    ;read from 1st hdd
+    mov dl, [hdd]                   ;read from 1st hdd
     mov ah, 0x02                    ;read
-    mov al, 8                       ;no of sectors/size of kernel
+    mov al, 8                       ;totoal no of sectors (must match makefile iso generation command)
     int 0x13
-
-    jc disk_read_error
 
 ;------------------------------entering protected mode-----------------------------------------
 goPMode:
@@ -45,26 +43,29 @@ goPMode:
 
     jmp code_seg:PModeMain          ;far jump to protected mode: setup cs
 
-
-disk_read_error:
-    hlt
-
 ;=============================32-bit protected mode============================================
 [bits 32]
 PModeMain:
+    mov ebp, 0x9c00                 ;setup base pointer 
+
     ; Set segment registers
     mov ax, data_seg
-    mov ds, ax
-    mov ss, ax
-    mov es, ax
-    mov ebp, 0x9c00
-    mov esp, ebp
+    mov ds, ax                      ;setup data segment
+    mov ss, ax                      ;setup stack segment (segment)
+    mov esp, ebp                    ;setup stack pointer (offset)
+    mov es, ax                      ;setup extra segment (si and di)
+    mov fs, ax
+    mov gs, ax
+
+    ;init tss
+    mov ax, taskstate_seg           ;load task state segment
+    ltr ax                          ;to task tegister
 
 
 test_printing:
     mov edi, 0xB8000                ;Video RAM memory area
     mov esi, msg                    ;"Booted!"
-    mov ah, 10001011b               ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
+    mov ah, 0x8b                    ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
 .print_loop:
     lodsb                           ;load [esi] to al, increment esi
     test al, al                     ;check for null terminator
@@ -74,7 +75,6 @@ test_printing:
 
 .goKernel:
     jmp code_seg:loader_start       ;jump to start address of loader (stage 2 bootloader)
-    jmp $                           ;catch exceptions
 
 ;=============================unlabelled data segment==========================================
 ;BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT
@@ -127,13 +127,16 @@ gdt_descriptor:
 
 code_seg equ gdt_code - gdt_start
 data_seg equ gdt_data - gdt_start
+taskstate_seg equ gdt_taskstate - gdt_start
 ;END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT
 
 ;loader, kernel info 
-loader_start equ 0x100000           ;LOADER STARTS AT 0x10000
-kernel_load_seg equ 0x1000          ;
+loader_start equ 0x100000           ;LOADER STARTS AT 0x100000
+loader_seg equ 0x1000
 
 msg db 'Booted!', 0
+
+hdd db 0
 
 times 510 - ($ - $$) db 0           ;memset remaining of 1st segment to 0
 dw 0xaa55                           ;last 2 bytes: MBR signature
