@@ -11,10 +11,11 @@ _start:
     mov ss, ax
     mov sp, 0x7c00 - 0x100          ;setup stack below bootloader 
 
-    mov [hdd], dl                   ;remember boot drive
+    mov [hdd], dl                   ;remember boot drive for reading from disk later
     sti                             ;enable interrupts
 
-    ;load kernel from hard drive using CHS
+;load raw kernel binary code from hard drive using CHS
+load_kernel_from_disk:
     mov bx, loader_seg
     mov ch, 0x00                    ;Cylinder
     mov dh, 0x00                    ;Head
@@ -23,6 +24,34 @@ _start:
     mov ah, 0x02                    ;read
     mov al, 8                       ;totoal no of sectors (must match makefile iso generation command)
     int 0x13
+    
+;load vesa vbe info from bios when in 16 bit real mode
+load_vesa_vbe:
+    ;get vesa bios info
+    mov ax, 0x4f01                  ;return vbe modes to es:di
+    mov cx, 0x118                   ;video mode 118 (seems the best idk)
+    mov dx, 0
+    mov es, dx                      ;set es = 0x0000 --\  es:di
+    mov di, vbe_info_block          ;di = 0x7e00     --/ =0x0000:0x7e00 = pointer to vbe info block.
+    int 0x10
+
+    cmp ax, 0x004f                  ;check if successful
+    jne halt
+
+    ;sets bios video mode, set linear framebuffer.
+    mov ax, 0x4f02                  ;Bios function: sets 
+    mov bx, 100000100011000b        ;VBE MODE 0x118 (100011000b) + Linear Framebuffer (14th bit set)
+    int 0x10
+
+    cmp ax, 0x004f                  ;check if successful
+    jne halt
+
+    .done: jmp goPMode              ;return arbitrarily when failed/completed
+
+halt:                               ;should not reach here unless vesa vbe load fails
+    cli
+    hlt
+    jmp halt
 
 ;------------------------------entering protected mode-----------------------------------------
 goPMode:
@@ -33,10 +62,12 @@ goPMode:
     or al, 2                        ;set bit 1 to 1: a20 enabled
     out 0x92, al                    ;output new config byte to 0x92
 
+    ;loading gdt
     xor ax, ax
     mov ds, ax                      ;clear data segment for our own 
     lgdt [gdt_descriptor]           ;load gdt
 
+    ;changing cpu mode
     mov eax, cr0                    ;make cr0 (cpu mode) := 1 := protected mode
     or eax, 1
     mov cr0, eax
@@ -47,6 +78,7 @@ goPMode:
 [bits 32]
 PModeMain:
     mov ebp, 0x9c00                 ;setup base pointer 
+    and ebp, 0xFFFFFFF0             ;trim last 4 bits (for long mode safety)
 
     ; Set segment registers
     mov ax, data_seg
@@ -62,19 +94,18 @@ PModeMain:
     ltr ax                          ;to task tegister
 
 
-test_printing:
-    mov edi, 0xB8000                ;Video RAM memory area
-    mov esi, msg                    ;"Booted!"
-    mov ah, 0x8b                    ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
-.print_loop:
-    lodsb                           ;load [esi] to al, increment esi
-    test al, al                     ;check for null terminator
-    jz .goKernel
-    stosw                           ;store ax to edi, add 2 to esi
-    jmp .print_loop
+    test_printing:
+        mov edi, 0xB8000                ;Video RAM memory area
+        mov esi, msg                    ;"Booted!"
+        mov ah, 0x8b                    ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
+        .print_loop:
+            lodsb                       ;load [esi] to al, increment esi
+            test al, al                 ;check for null terminator
+            jz .goKernel
+            stosw                       ;store ax to edi, add 2 to esi
+        jmp .print_loop
 
-.goKernel:
-    jmp code_seg:loader_start       ;jump to start address of loader (stage 2 bootloader)
+    .goKernel: jmp code_seg:loader_start       ;jump to start address of loader (stage 2 bootloader)
 
 ;=============================unlabelled data segment==========================================
 ;BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT
@@ -134,9 +165,9 @@ taskstate_seg equ gdt_taskstate - gdt_start
 loader_start equ 0x100000           ;LOADER STARTS AT 0x100000
 loader_seg equ 0x1000
 
-msg db 'Booted!', 0
-
-hdd db 0
-
+vbe_info_block equ 0x8000           ;vbe info block address = 0x8000 (MBR < 0x800 < loader + kernel)
+hdd db 0                            ;bootdrive id
+msg db 'Booted!', 0                 ;cute message
+;==============================================================================================
 times 510 - ($ - $$) db 0           ;memset remaining of 1st segment to 0
 dw 0xaa55                           ;last 2 bytes: MBR signature
