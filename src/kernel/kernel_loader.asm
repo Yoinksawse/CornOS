@@ -1,10 +1,10 @@
-;bootloader stage 2 
+;kernel loader 
 ;KERNEL STARTS AT 0x100000
 [bits 32]
 
 section .text
     global _ldr_start:       ;entry point into kernel (accessed by booter)
-    extern kmain            ;in kernel.c
+    extern kmain             ;in kernel.c
 
 _ldr_start:
     call kmain

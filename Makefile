@@ -1,5 +1,6 @@
 HOME_DIR := .
-OS_NAME := BeckerOS
+OS_NAME := CornOS
+KERNEL_NAME := CornKernel
 ISO_DIR := isobuild
 ISO_OUTPUT := $(OS_NAME).iso
 BIN_OUTPUT := $(HOME_DIR)/bin/$(OS_NAME).bin
@@ -8,18 +9,18 @@ FLAGS := -g -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iin
 
 BOOT_SRC := $(HOME_DIR)/src/bootloader/boot.asm
 BOOT_BIN := $(HOME_DIR)/bin/boot.bin
-LOADER_SRC := $(HOME_DIR)/src/bootloader/loader.asm
-LOADER_OBJ := $(HOME_DIR)/bin/loader.o
 
+LOADER_SRC := $(HOME_DIR)/src/kernel/kernel_loader.asm
+LOADER_OBJ := $(HOME_DIR)/bin/kernel_loader.o
 KERNEL_SRC := $(HOME_DIR)/src/kernel/kernel.c
 KERNEL_OBJ := $(HOME_DIR)/bin/kernel.o
 KERNEL_ELF := $(HOME_DIR)/bin/kernel.elf
 KERNEL_BIN := $(HOME_DIR)/bin/kernel.bin
 
-COMPLETEKERNEL_BIN := $(HOME_DIR)/bin/completeKernel.o
+COMPLETEKERNEL_OBJ := $(HOME_DIR)/bin/CornKernel.o
 
 all: bootloader kernel bin iso clean
-	#qemu-system-i386 -fda ./bin/BeckerOS.bin -S -gdb tcp::1234
+	#qemu-system-i386 -fda ./bin/$(OS_NAME).bin -S -gdb tcp::1234
 	qemu-system-i386 -cdrom $(ISO_OUTPUT) -boot d -m 512
 
 
@@ -42,8 +43,8 @@ kernel: bootloader
 
 	#for 32-bit protected mode (screeek version: idk how to build commands.)
 	i686-elf-gcc -I./src $(FLAGS) -std=gnu99 -c $(KERNEL_SRC) -o $(KERNEL_OBJ)
-	i686-elf-ld -g -relocatable $(LOADER_OBJ) $(KERNEL_OBJ) -o $(COMPLETEKERNEL_BIN)
-	i686-elf-gcc $(FLAGS) -T ./linker.ld -o $(KERNEL_BIN) -ffreestanding -O0 -nostdlib $(COMPLETEKERNEL_BIN)
+	i686-elf-ld -g -relocatable $(LOADER_OBJ) $(KERNEL_OBJ) -o $(COMPLETEKERNEL_OBJ)
+	i686-elf-gcc $(FLAGS) -T ./linker.ld -o $(KERNEL_BIN) -ffreestanding -O0 -nostdlib $(COMPLETEKERNEL_OBJ)
 	
 bin: kernel
 	#dd if=$(BOOT_BIN) >> $(BIN_OUTPUT)
