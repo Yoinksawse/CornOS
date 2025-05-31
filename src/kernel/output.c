@@ -37,3 +37,11 @@ struct vbe_mode_info_structure {
 	uint16_t off_screen_mem_size;	// size of memory in the framebuffer but not being displayed on the screen
 	uint8_t reserved1[206];
 } __attribute__ ((packed));
+
+volatile struct vbe_mode_info_structure* vbe_info = (volatile struct vbe_mode_info_structure*)0x8000;
+
+void put_pixel(int x, int y, unsigned char colour) {
+	uint8_t* vram = (uint8_t*)(uintptr_t) vbe_info->framebuffer;						//framebuffer pos
+	unsigned char *pixel = vram + y * (vbe_info->pitch) + x * (vbe_info->bpp / 8);		//bpp:pixel width (x), pitch: y
+	*pixel = colour;
+}

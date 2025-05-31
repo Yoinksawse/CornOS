@@ -32,7 +32,7 @@ load_vesa_vbe:
     mov cx, 0x118                   ;video mode 118 (seems the best idk)
     mov dx, 0
     mov es, dx                      ;set es = 0x0000 --\  es:di
-    mov di, vbe_info_block          ;di = 0x7e00     --/ =0x0000:0x7e00 = pointer to vbe info block.
+    mov di, vbe_info_block          ;di = 0x8000     --/ =0x0000:0x8000 = pointer to vbe info block.
     int 0x10
 
     cmp ax, 0x004f                  ;check if successful
