@@ -2,21 +2,21 @@ ENTRY(kmain)
 OUTPUT_FORMAT(binary)
 
 SECTIONS {
-    . = 0x100000;   /* Load address from bootloader */
+    . = 0x100000;   /*kernel here*/
 
-    .text : {
+    .text : ALIGN(4096) {
         *(.text)
     }
 
-    .rodata : {
+    .rodata : ALIGN(4096) {
         *(.rodata)
     }
 
-    .data : {
+    .data : ALIGN(4096) {
         *(.data)
     }
 
-    .bss : {
+    .bss : ALIGN(4096) {
         *(.bss COMMON)
     }
 }
