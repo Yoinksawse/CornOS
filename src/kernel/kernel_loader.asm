@@ -1,4 +1,4 @@
-;kernel loader 
+;kernel loader: SKIPPED
 ;KERNEL STARTS AT 0x100000
 [bits 32]
 
@@ -11,3 +11,5 @@ _ldr_start:
     jmp $
 
 times 512 - ($ - $$) db 0
+
+;SKIPPED SECTION

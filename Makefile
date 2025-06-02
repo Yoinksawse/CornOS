@@ -29,7 +29,8 @@ all: bootloader kernel bin iso clean
 	#qemu-system-i386 -fda ./bin/$(OS_NAME).bin -S -gdb tcp::1234
 	qemu-system-i386 -cdrom $(ISO_OUTPUT) -boot d -m 512
 
-
+test: bin
+	qemu-system-i386 -fda $(BIN_OUTPUT) -serial stdio
 test-qemu: bin
 	#SECOND TERMINAL, run this in new terminal first before test-gdb
 	qemu-system-i386 -fda $(BIN_OUTPUT) -S -gdb tcp::1234

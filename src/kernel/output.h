@@ -4,7 +4,7 @@
 #define OUTPUT_H
 
 //define shared constants
-#define VBE_INFO_BLOCK_ADDR 0x8000		//used by bootloader
+#define VBE_MODE_INFO_BLOCK_ADDR 0xA000		//used by bootloader
 
 //define structures
 typedef struct __attribute__((packed)) vbe_mode_info_structure {
@@ -41,14 +41,13 @@ typedef struct __attribute__((packed)) vbe_mode_info_structure {
 
 	uint32_t framebuffer;		    // (32 BIT COLOUR MODE) physical address of linear framebuffer; write here to draw to the screen
 	uint32_t off_screen_mem_off;
-	uint16_t off_screen_mem_size;	// size of memory in the framebuffer but not being displayed on the screen
-	uint8_t reserved1[206];
+	uint32_t off_screen_mem_size;	// (USELESS FOR NOW) size of memory in the framebuffer but not being displayed on the screen
+	uint8_t reserved1[204];
 } vbeinfo_struct;  //also define simplified info block struct name
 
-extern volatile vbeinfo_struct* vbe_info;
-
 //define functions
-void put_pixel(int x, int y, unsigned char colour);
+void put_pixel(int x, int y, uint32_t colour);
+void fill_screen_green();
 void draw_line(int sx, int sy, int ex, int ey, uint32_t colour);
 void draw_horizontal_line(int sx, int sy, int ex, int ey, uint32_t colour); //used locally only; not necessary to define
 void draw_vertical_line(int sx, int sy, int ex, int ey, uint32_t colour); //used locally only; not necessary to define

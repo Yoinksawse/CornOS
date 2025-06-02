@@ -24,34 +24,32 @@ load_kernel_from_disk:
     mov ah, 0x02                    ;read
     mov al, 8                       ;totoal no of sectors (must match makefile iso generation command)
     int 0x13
-    
+
 ;load vesa vbe info from bios when in 16 bit real mode
 load_vesa_vbe:
+    ;clear info block at 0xA000
+    mov ax, 0x0A00
+    mov es, ax
+    xor di, di
+    mov cx, 512
+    xor ax, ax
+    .clear_vbe_loop:
+        stosw
+        loop .clear_vbe_loop
+
     ;get vesa bios info
     mov ax, 0x4f01                  ;return vbe modes to es:di
     mov cx, 0x118                   ;video mode 118 (seems the best idk)
-    mov dx, 0
-    mov es, dx                      ;set es = 0x0000 --\  es:di
-    mov di, vbe_info_block          ;di = 0x8000     --/ =0x0000:0x8000 = pointer to vbe info block.
+    xor dx, dx                      ;calc segment = 0xA000 >> 4
+    mov dx, 0x0A00
+    mov es, dx
+    xor di, di                      ;calc offset = 0
     int 0x10
-
-    cmp ax, 0x004f                  ;check if successful
-    jne halt
 
     ;sets bios video mode, set linear framebuffer.
     mov ax, 0x4f02                  ;Bios function: sets 
-    mov bx, 100000100011000b        ;VBE MODE 0x118 (100011000b) + Linear Framebuffer (14th bit set)
+    mov bx, 0x4118                  ;VBE MODE 0x118 (100011000b) + Linear Framebuffer (14th bit set)
     int 0x10
-
-    cmp ax, 0x004f                  ;check if successful
-    jne halt
-
-    .done: jmp goPMode              ;return arbitrarily when failed/completed
-
-halt:                               ;should not reach here unless vesa vbe load fails
-    cli
-    hlt
-    jmp halt
 
 ;------------------------------entering protected mode-----------------------------------------
 goPMode:
@@ -94,16 +92,16 @@ PModeMain:
     ltr ax                          ;to task tegister
 
 
-    test_printing:
-        mov edi, 0xB8000                ;Video RAM memory area
-        mov esi, msg                    ;"Booted!"
-        mov ah, 0x8b                    ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
-        .print_loop:
-            lodsb                       ;load [esi] to al, increment esi
-            test al, al                 ;check for null terminator
-            jz .goKernel
-            stosw                       ;store ax to edi, add 2 to esi
-        jmp .print_loop
+    ;test_printing:
+    ;    mov edi, 0xB8000                ;Video RAM memory area
+    ;    mov esi, msg                    ;"Booted!"
+    ;    mov ah, 0x8b                    ;attribute byte: bright cyan on black, blinking: change to 0x1b for more colours
+    ;    .print_loop:
+    ;        lodsb                       ;load [esi] to al, increment esi
+    ;        test al, al                 ;check for null terminator
+    ;        jz .goKernel
+    ;        stosw                       ;store ax to edi, add 2 to esi
+    ;    jmp .print_loop
 
     .goKernel: jmp code_seg:loader_start       ;jump to start address of loader (stage 2 bootloader)
 
@@ -165,7 +163,7 @@ taskstate_seg equ gdt_taskstate - gdt_start
 loader_start equ 0x100000           ;LOADER STARTS AT 0x100000
 loader_seg equ 0x1000
 
-vbe_info_block equ 0x8000           ;vbe info block address = 0x8000 (MBR < 0x800 < loader + kernel)
+vbe_info_block equ 0xA000           ;vbe info block address = 0x8000 (MBR < 0x800 < loader + kernel)
 hdd db 0                            ;bootdrive id
 msg db 'Booted!', 0                 ;cute message
 ;==============================================================================================

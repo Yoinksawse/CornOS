@@ -2,21 +2,49 @@
 #include "mylib.h"
 #include "output.h" //header files use "" not <>
 
-void put_pixel(int x, int y, unsigned char colour) {
-	//pointer to vbe info block
-	vbeinfo_struct* vbeinfo = (vbeinfo_struct*) VBE_INFO_BLOCK_ADDR;
-	//pointer to framebuffer address
-	uint8_t* vram = (uint8_t*)(uintptr_t) vbeinfo->framebuffer;
+void put_pixel(int x, int y, uint32_t colour) {
+    vbeinfo_struct* vbeinfo = (vbeinfo_struct*)VBE_MODE_INFO_BLOCK_ADDR;  //pointer to vbe info block
+    uint8_t* buffer = (uint8_t*)(uintptr_t)vbeinfo->framebuffer;       //pointer to framebuffer address
 
-	//pointer to pixel to place (address in video ram)
-	//bpp:pixel width (x), pitch: y (formula for pixel offset)
-	uint32_t *pixel = (uint32_t*)(vram + y * (vbeinfo->pitch) + x * (vbeinfo->bpp / 8));
-	
-	//PUT!!!!!
-	//32 bit/doubleword per pixel => ARGB colour: dd 0x00RRGGBB
-	*pixel = colour;
+    if (x < 0 || y < 0 || x >= vbeinfo->width || y >= vbeinfo->height) return;  // Check bounds
+
+    // Calculate pixel offset based on actual BPP
+    uint32_t pixel_offset = y * vbeinfo->pitch + x * (vbeinfo->bpp / 8);
+    
+	if (vbeinfo->bpp == 32) {
+        uintptr_t pixel_addr = (uintptr_t)buffer + pixel_offset;
+        *((uint32_t*)pixel_addr) = colour;
+    } else if (vbeinfo->bpp == 24) {
+        buffer[pixel_offset]     = (colour >> 0) & 0xFF;  //blue
+        buffer[pixel_offset + 1] = (colour >> 8) & 0xFF;  //green
+        buffer[pixel_offset + 2] = (colour >> 16) & 0xFF; //red
+    }
 }
 
+/*
+void fill_screen_green() {
+    vbeinfo_struct* vbeinfo = (vbeinfo_struct*)VBE_MODE_INFO_BLOCK_ADDR;
+    uint8_t* vram = (uint8_t*)(uintptr_t)vbeinfo->framebuffer;
+
+    if (vbeinfo->bpp != 32) return;
+
+    uint32_t green_color = 0x00FF00FF;
+    uint32_t width = vbeinfo->width;
+    uint32_t height = vbeinfo->height;
+    uint32_t pitch = vbeinfo->pitch;
+
+    //write 1 row first
+    uint32_t* row = (uint32_t*)vram;
+    for (uint32_t x = 0; x < width; x++) row[x] = green_color;
+    //copy row height times
+    for (uint32_t y = 1; y < height; y++) {
+        memcpy(vram + y * pitch, vram, width * 4);  //4bpp
+    }
+}
+*/
+
+
+/*
 //bresenham
 void draw_line(int sx, int sy, int ex, int ey, uint32_t colour) {
 	if (abs(ex - sx) > abs(ey - sy)) draw_horizontal_line(sx, sy, ex, ey, colour);
@@ -69,3 +97,5 @@ void draw_vertical_line(int sx, int sy, int ex, int ey, uint32_t colour) {
 		}
 	}
 }
+
+*/

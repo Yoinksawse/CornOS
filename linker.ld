@@ -1,22 +1,22 @@
-ENTRY(_ldr_start)    /*starting point of kernel*/
+ENTRY(kmain)
 OUTPUT_FORMAT(binary)
 
 SECTIONS {
-    . = 0x100000;   /*kernel here*/
+    . = 0x100000;   /* Load address from bootloader */
 
-    .text : ALIGN(4096) {
+    .text : {
         *(.text)
     }
 
-    .rodata : ALIGN(4096) {
+    .rodata : {
         *(.rodata)
     }
 
-    .data : ALIGN(4096) {
+    .data : {
         *(.data)
     }
 
-    .bss : ALIGN(4096) {
+    .bss : {
         *(.bss COMMON)
     }
 }

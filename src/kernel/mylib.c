@@ -14,3 +14,13 @@ void swap(int* a, int* b) {
     *a = *b;
     *b = temp;
 }
+
+void memcpy(void *dest, void *src, unsigned int n) {  //from gfg
+// Typecast src and dest addresses to (char *) 
+char *csrc = (char *)src; 
+char *cdest = (char *)dest; 
+
+// Copy contents of src[] to dest[] 
+for (int i=0; i<n; i++) 
+    cdest[i] = csrc[i]; 
+} 
