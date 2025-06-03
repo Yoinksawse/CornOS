@@ -16,7 +16,7 @@ _start:
 
 ;load raw kernel binary code from hard drive using CHS
 load_kernel_from_disk:
-    mov bx, loader_seg
+    mov bx, kernel_start
     mov ch, 0x00                    ;Cylinder
     mov dh, 0x00                    ;Head
     mov cl, 0x02                    ;Sector
@@ -27,8 +27,8 @@ load_kernel_from_disk:
 
 ;load vesa vbe info from bios when in 16 bit real mode
 load_vesa_vbe:
-    ;clear info block at 0xA000
-    mov ax, 0x0A00
+    ;clear info block at 0x8000 (physical addr)
+    mov ax, 0x0800
     mov es, ax
     xor di, di
     mov cx, 512
@@ -40,8 +40,8 @@ load_vesa_vbe:
     ;get vesa bios info
     mov ax, 0x4f01                  ;return vbe modes to es:di
     mov cx, 0x118                   ;video mode 118 (seems the best idk)
-    xor dx, dx                      ;calc segment = 0xA000 >> 4
-    mov dx, 0x0A00
+    xor dx, dx                      ;calc segment = 0x8000 >> 4
+    mov dx, 0x0800
     mov es, dx
     xor di, di                      ;calc offset = 0
     int 0x10
@@ -103,7 +103,7 @@ PModeMain:
     ;        stosw                       ;store ax to edi, add 2 to esi
     ;    jmp .print_loop
 
-    .goKernel: jmp code_seg:loader_start       ;jump to start address of loader (stage 2 bootloader)
+    .goKernel: jmp code_seg:kernel_start       ;jump to start address of loader (stage 2 bootloader)
 
 ;=============================unlabelled data segment==========================================
 ;BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT BEGIN GDT
@@ -160,10 +160,9 @@ taskstate_seg equ gdt_taskstate - gdt_start
 ;END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT END GDT
 
 ;loader, kernel info 
-loader_start equ 0x100000           ;LOADER STARTS AT 0x100000
-loader_seg equ 0x1000
+kernel_start equ 0xA000           ;kernel STARTS AT 0xA000
 
-vbe_info_block equ 0xA000           ;vbe info block address = 0x8000 (MBR < 0x800 < loader + kernel)
+vbe_info_block equ 0x8000           ;vbe info block address = 0x8000 (MBR < 0x800 < loader + kernel)
 hdd db 0                            ;bootdrive id
 msg db 'Booted!', 0                 ;cute message
 ;==============================================================================================

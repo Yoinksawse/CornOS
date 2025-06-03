@@ -1,5 +1,5 @@
 ;kernel loader: SKIPPED
-;KERNEL STARTS AT 0x100000
+;KERNEL STARTS AT 0xA000
 [bits 32]
 
 section .text

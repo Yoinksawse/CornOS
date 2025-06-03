@@ -1,4 +1,4 @@
-//KERNEL STARTS AT 100000
+//KERNEL STARTS AT 0xA000
 #include "kernel.h"
 #include "mylib.h"
 #include "output.h"  //header files use "" not <>
